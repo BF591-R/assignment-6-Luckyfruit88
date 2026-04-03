@@ -33,7 +33,10 @@ for (package in libs) {
 #'
 #' @examples counts_df <- load_n_trim("/path/to/counts/verse_counts.tsv")
 load_n_trim <- function(filename) {
-    return(NULL)
+  df <- as.data.frame(read_tsv(filename, show_col_types = FALSE)[, c("gene", "vP0_1", "vP0_2", "vAd_1", "vAd_2")])
+  rownames(df) <- df$gene
+  df$gene <- NULL
+  return(df)
 }
 
 #' Perform a DESeq2 analysis of rna seq data
@@ -57,7 +60,14 @@ load_n_trim <- function(filename) {
 #'
 #' @examples run_deseq(counts_df, coldata, 10, "condition_day4_vs_day7")
 run_deseq <- function(count_dataframe, coldata, count_filter, condition_name) {
-    return(NULL)
+  dds <- DESeqDataSetFromMatrix(countData = count_dataframe,
+                                colData = coldata,
+                                design = ~ condition)
+  keep <- rowSums(counts(dds)) >= count_filter
+  dds <- dds[keep,]
+  dds <- DESeq(dds)
+  res <- results(dds, name=condition_name)
+  return(res)
 }
 
 #### edgeR ####
@@ -77,10 +87,16 @@ run_deseq <- function(count_dataframe, coldata, count_filter, condition_name) {
 #'
 #' @examples run_edger(counts_df, group)
 run_edger <- function(count_dataframe, group) {
-    return(NULL)
+  dge <- DGEList(counts=count_dataframe, group=group)
+  keep <- filterByExpr(dge)
+  dge <- dge[keep, , keep.lib.sizes=FALSE]
+  dge <- calcNormFactors(dge)
+  dge <- estimateDisp(dge)
+  et <- exactTest(dge)
+  return(et$table)
 }
 
- #### limma ####
+#### limma ####
 #' Perform an analysis using Limma, with an mandatory voom component.
 #'
 #' @param count_dataframe The same dataframe as previous functions.
@@ -101,7 +117,15 @@ run_edger <- function(count_dataframe, group) {
 #' 
 #' @examples run_limma(counts_df, design, voom=TRUE)
 run_limma <- function(counts_dataframe, design, group) {
-    return(NULL)
+  dge <- DGEList(counts=counts_dataframe, group=group)
+  keep <- filterByExpr(dge, design)
+  dge <- dge[keep, , keep.lib.sizes=FALSE]
+  dge <- calcNormFactors(dge)
+  v <- voom(dge, design, plot=FALSE)
+  fit <- lmFit(v, design)
+  fit <- eBayes(fit)
+  res <- topTable(fit, coef=ncol(design), n=Inf, sort.by="P")
+  return(res)
 }
 
 #### ggplot ####
@@ -133,7 +157,10 @@ run_limma <- function(counts_dataframe, design, group) {
 #' 2 deseq   9.97e-261
 #' 3 deseq   1.16e-206
 combine_pval <- function(deseq, edger, limma) {
-    return(NULL)
+  df_deseq <- tibble(package="DESeq2", pval=deseq$pvalue)
+  df_edger <- tibble(package="edgeR", pval=edger$PValue)
+  df_limma <- tibble(package="limma", pval=limma$P.Value)
+  return(bind_rows(df_deseq, df_edger, df_limma))
 }
 
 #' Create three separate facets for each of the diff. exp. pacakges.
@@ -157,7 +184,10 @@ combine_pval <- function(deseq, edger, limma) {
 #' 1  -9.84 2.23e-180 edgeR  
 #' 2   6.18 5.87e-179 edgeR  
 create_facets <- function(deseq, edger, limma) {
-    return(NULL)
+  df_deseq <- tibble(logFC=deseq$log2FoldChange, padj=deseq$padj, package="DESeq2")
+  df_edger <- tibble(logFC=edger$logFC, padj=edger$PValue, package="edgeR")
+  df_limma <- tibble(logFC=limma$logFC, padj=limma$adj.P.Val, package="limma")
+  return(bind_rows(df_deseq, df_edger, df_limma))
 }
 
 #' Create an attractive volcano plot of three diff. exp. packages' data.
@@ -187,6 +217,15 @@ create_facets <- function(deseq, edger, limma) {
 #'
 #' @examples p <- theme_plot(volcano)
 theme_plot <- function(volcano_data) {
-    return(NULL)
+  p <- ggplot(volcano_data, aes(x=logFC, y=-log10(padj), color=package)) +
+    geom_point(alpha=0.5) +
+    facet_wrap(~ package) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    labs(title="Volcano Plot of Differential Expression",
+         x="Log2 Fold Change",
+         y="-log10(Adjusted P-Value)") +
+    scale_color_brewer(palette="Set1")
+  return(p)
 }
 

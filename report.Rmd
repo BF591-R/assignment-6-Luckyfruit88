@@ -27,6 +27,9 @@ If you like aesthetics, feel free to remove the above warning section from your 
 ## Setup
 ```{r Packages + setup, }
 source("main.R") # load all our wonderful functions
+if (!requireNamespace("ggVennDiagram", quietly = TRUE)) {
+  install.packages("ggVennDiagram", repos = "https://cloud.r-project.org")
+}
 knitr::opts_chunk$set(echo = FALSE) # no markdown for you <3
 ```
 
@@ -106,7 +109,7 @@ x <- list(EdgeR = row.names(edger_res),
           DESeq2 = row.names(deseq_res),
           Limma = row.names(limma_res))
 
-ggVennDiagram(x) +
+ggVennDiagram::ggVennDiagram(x) +
   ggtitle("Top 1000 genes from three diff. exp. R packages")
 ```
 
@@ -154,7 +157,7 @@ x <- list(EdgeR = row.names(edger_res),
           Voom = row.names(limma_res),
           Limma = row.names(vooml))
 
-ggVennDiagram(x) +
+ggVennDiagram::ggVennDiagram(x) +
   ggtitle("Top 1000 genes from FOUR diff. exp. R packages")
 ```
 
